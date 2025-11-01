@@ -1,0 +1,125 @@
+{
+  "description": "Демонстраційна сесія GUI - 4 альтернативи, 2 експерти",
+  "alternatives": [
+    "Проект_A",
+    "Проект_B",
+    "Проект_C",
+    "Проект_D"
+  ],
+  "experts": [
+    {
+      "expert_id": "Експерт_1",
+      "competence": 0.85,
+      "judgments": [
+        {
+          "alt_i": "Проект_A",
+          "alt_j": "Проект_B",
+          "value": 3.0,
+          "scale_type": "saaty_9",
+          "n_gradations": 9,
+          "scale_history": []
+        },
+        {
+          "alt_i": "Проект_A",
+          "alt_j": "Проект_C",
+          "value": 5.0,
+          "scale_type": "saaty_9",
+          "n_gradations": 9,
+          "scale_history": []
+        },
+        {
+          "alt_i": "Проект_A",
+          "alt_j": "Проект_D",
+          "value": 7.0,
+          "scale_type": "saaty_9",
+          "n_gradations": 9,
+          "scale_history": []
+        },
+        {
+          "alt_i": "Проект_B",
+          "alt_j": "Проект_C",
+          "value": 3.0,
+          "scale_type": "saaty_9",
+          "n_gradations": 9,
+          "scale_history": []
+        },
+        {
+          "alt_i": "Проект_B",
+          "alt_j": "Проект_D",
+          "value": 5.0,
+          "scale_type": "saaty_9",
+          "n_gradations": 9,
+          "scale_history": []
+        },
+        {
+          "alt_i": "Проект_C",
+          "alt_j": "Проект_D",
+          "value": 3.0,
+          "scale_type": "saaty_9",
+          "n_gradations": 9,
+          "scale_history": []
+        }
+      ]
+    },
+    {
+      "expert_id": "Експерт_2",
+      "competence": 0.6,
+      "judgments": [
+        {
+          "alt_i": "Проект_A",
+          "alt_j": "Проект_B",
+          "value": 5.0,
+          "scale_type": "saaty_5",
+          "n_gradations": 5,
+          "scale_history": []
+        },
+        {
+          "alt_i": "Проект_A",
+          "alt_j": "Проект_C",
+          "value": 7.0,
+          "scale_type": "saaty_5",
+          "n_gradations": 5,
+          "scale_history": []
+        },
+        {
+          "alt_i": "Проект_A",
+          "alt_j": "Проект_D",
+          "value": 9.0,
+          "scale_type": "saaty_5",
+          "n_gradations": 5,
+          "scale_history": []
+        },
+        {
+          "alt_i": "Проект_B",
+          "alt_j": "Проект_C",
+          "value": 5.0,
+          "scale_type": "saaty_5",
+          "n_gradations": 5,
+          "scale_history": []
+        },
+        {
+          "alt_i": "Проект_B",
+          "alt_j": "Проект_D",
+          "value": 7.0,
+          "scale_type": "saaty_5",
+          "n_gradations": 5,
+          "scale_history": []
+        },
+        {
+          "alt_i": "Проект_C",
+          "alt_j": "Проект_D",
+          "value": 3.0,
+          "scale_type": "saaty_5",
+          "n_gradations": 5,
+          "scale_history": []
+        }
+      ]
+    }
+  ],
+  "competence_coefficients": {
+    "Експерт_1": 0.85,
+    "Експерт_2": 0.6
+  },
+  "current_expert_idx": 2,
+  "current_pair_idx": 0
+}
