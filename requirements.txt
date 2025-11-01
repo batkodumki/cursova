@@ -2,7 +2,13 @@
 # Python 3.10+
 
 # Обчислення власних значень та векторів
+# Core dependencies
 numpy>=1.24.0
+
+# GUI dependencies (tkinter is typically included with Python)
+# If tkinter is not available, install python3-tk on Linux:
+#   sudo apt-get install python3-tk  (Debian/Ubuntu)
+#   sudo yum install python3-tkinter  (RedHat/Fedora)
 scipy>=1.10.0
 
 # Експорт результатів

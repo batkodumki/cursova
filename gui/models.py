@@ -13,7 +13,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from scales import ScaleType, get_scale_values, calculate_informativeness, unify_judgment
+from scales import ScaleType, get_scale_values, calculate_informativeness, unify_judgment, create_transformation_log
 from pcm import PairwiseComparisonMatrix, PCMStatus
 from consistency import (
     consistency_spectral,
@@ -209,10 +209,11 @@ class SessionModel:
 
     def calculate_results(self) -> Dict:
         """
-        Обчислює остаточні результати
+        Обчислює остаточні результати з журналом трансформацій.
+        Базується на РЗОД-2011-4.pdf (уніфікація та агрегація)
 
         Returns:
-            Словник з результатами: ваги, узгодженість, рекомендації
+            Словник з результатами: ваги, узгодженість, рекомендації, transformations
         """
         pcm_list = self.build_pcm_list()
 
@@ -244,6 +245,27 @@ class SessionModel:
                 top_k=5
             )
 
+        # Журнал трансформацій шкал
+        transformations = []
+        for expert in self.experts:
+            for judgment in expert.judgments:
+                # Створюємо запис трансформації
+                comparison = f"{judgment.alt_i} vs {judgment.alt_j}"
+                unified_value = unify_judgment(
+                    judgment.scale_type,
+                    judgment.n_gradations,
+                    judgment.value
+                )
+                log_entry = create_transformation_log(
+                    expert.expert_id,
+                    comparison,
+                    judgment.scale_type,
+                    judgment.n_gradations,
+                    judgment.value,
+                    unified_value
+                )
+                transformations.append(log_entry)
+
         return {
             'aggregated_matrix': aggregated_matrix,
             'consistency': consistency,
@@ -251,7 +273,8 @@ class SessionModel:
             'ranking': ranking,
             'suggestions': suggestions,
             'expert_weights': aggregation_result['expert_weights'],
-            'expert_statistics': aggregation_result['expert_statistics']
+            'expert_statistics': aggregation_result['expert_statistics'],
+            'scale_transformations': transformations
         }
 
     def save_session(self, filename: str):
@@ -322,34 +345,39 @@ class ScaleManager:
     """
 
     # Лінгвістичні фрази для кожної шкали (українською)
+    # Базується на РЗОД-2011-3.pdf та класичній шкалі Сааті
     LINGUISTIC_LABELS = {
         ScaleType.ORDINAL: {
             2: ["Рівноцінні", "Переважає"]
         },
-        ScaleType.SAATY_5: {
-            5: ["Рівноцінні", "Слабко переважає", "Помірно переважає",
-                "Сильно переважає", "Дуже сильно переважає"]
-        },
         ScaleType.SAATY_9: {
+            3: ["Рівноцінні", "Помірно", "Дуже сильно"],
+            5: ["Рівноцінні", "Слабко", "Помірно", "Сильно", "Дуже сильно"],
+            7: ["Рівноцінні", "Дуже слабко", "Слабко", "Помірно слабко",
+                "Помірно", "Помірно сильно", "Сильно", "Дуже сильно"],
             9: ["Рівноцінні", "Дуже слабко", "Слабко", "Помірно слабко",
                 "Помірно", "Помірно сильно", "Сильно", "Дуже сильно",
                 "Надзвичайно сильно"]
         },
-        ScaleType.BALANCED: {},
-        ScaleType.POWER: {},
-        ScaleType.MA_ZHENG: {},
-        ScaleType.DONEGAN: {}
+        ScaleType.BALANCED: {},  # Генеруються автоматично
+        ScaleType.POWER: {},  # Генеруються автоматично
+        ScaleType.MA_ZHENG: {},  # Генеруються автоматично
+        ScaleType.DONEGAN: {}  # Генеруються автоматично
     }
 
     @staticmethod
     def get_available_scales() -> List[Tuple[ScaleType, str]]:
-        """Повертає список доступних шкал з описами"""
+        """
+        Повертає список всіх 6 доступних шкал з описами.
+        Базується на РЗОД-2011-3.pdf
+        """
         return [
             (ScaleType.ORDINAL, "Ординальна (2 градації)"),
-            (ScaleType.SAATY_5, "Сааті-5 (5 градацій)"),
-            (ScaleType.SAATY_9, "Сааті-9 (9 градацій)"),
+            (ScaleType.SAATY_9, "Цілочислова/Сааті-9 (3-9 градацій)"),
             (ScaleType.BALANCED, "Збалансована (3-9 градацій)"),
             (ScaleType.POWER, "Степенева (3-9 градацій)"),
+            (ScaleType.MA_ZHENG, "Ма-Чженга (3-9 градацій)"),
+            (ScaleType.DONEGAN, "Донегана-Додд-МакМастера (3-9 градацій)"),
         ]
 
     @staticmethod
@@ -389,7 +417,8 @@ class ScaleManager:
     @staticmethod
     def suggest_scale_refinement(scale_type: ScaleType, n_gradations: int) -> Optional[Tuple[ScaleType, int]]:
         """
-        Пропонує уточнення шкали (збільшення детальності)
+        Пропонує уточнення шкали (збільшення детальності).
+        Реалізує покрокове уточнення згідно Opys_Рівень.doc та РЗОД-2011-2.pdf
 
         Args:
             scale_type: Поточний тип шкали
@@ -397,17 +426,26 @@ class ScaleManager:
 
         Returns:
             (новий_тип, нова_кількість) або None якщо уточнення неможливе
+
+        Логіка уточнення:
+            Ординальна (2) → Сааті-9 (3) → Сааті-9 (5) → Сааті-9 (7) → Сааті-9 (9)
+            Або вибір іншої шкали (Збалансована/Степенева/Ма-Чженга/Донегана)
         """
         min_grad, max_grad = ScaleManager.get_scale_gradations_range(scale_type)
 
         # Можемо збільшити кількість градацій у межах поточної шкали
         if n_gradations < max_grad:
-            return (scale_type, min(n_gradations + 2, max_grad))
+            # Збільшуємо на 2 градації (3→5→7→9)
+            new_n = min(n_gradations + 2, max_grad)
+            return (scale_type, new_n)
 
-        # Або запропонувати перехід на іншу шкалу з більшою деталізацією
+        # Якщо ординальна - переходимо до Сааті-9 з 3 градаціями
         if scale_type == ScaleType.ORDINAL:
-            return (ScaleType.SAATY_5, 3)
-        elif scale_type == ScaleType.SAATY_5 and n_gradations < 9:
-            return (ScaleType.SAATY_9, 7)
+            return (ScaleType.SAATY_9, 3)
+
+        # Якщо досягнуто максимуму для поточної шкали - пропонуємо іншу
+        if scale_type == ScaleType.SAATY_9 and n_gradations == 9:
+            # Можна запропонувати спробувати іншу шкалу для експериментів
+            return None
 
         return None

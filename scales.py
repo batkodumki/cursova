@@ -1,37 +1,42 @@
 """
 Модуль scales.py - визначення шкал експертних оцінок, таблиці відповідників, уніфікація
-Базується на джерелах: РЗОД-2011-3.pdf (вибір шкал), РЗОД-2011-4.pdf (уніфікація)
+Базується на джерелах: РЗОД-2011-3.pdf (вибір шкал, таблиці 5, 6), РЗОД-2011-4.pdf (уніфікація)
 
-Реалізує:
-- Визначення шкал: порядкова, Сааті-5, Сааті-9, збалансована, степенева
-- Таблиці відповідників між шкалами
-- Уніфікацію оцінок до єдиної кардинальної шкали (1-9)
+Реалізує рівно 6 шкал експертних оцінок:
+1. Ординальна (2 градації)
+2. Цілочислова/Сааті-9 (9 градацій) - класична шкала Сааті
+3. Збалансована (3-9 градацій) - формули з РЗОД-2011-3
+4. Степенева (3-9 градацій) - формули з РЗОД-2011-3
+5. Ма-Чженга (3-9 градацій) - таблиця 5 у РЗОД-2011-3
+6. Донегана-Додд-МакМастера (3-9 градацій) - таблиця 6 у РЗОД-2011-3
+
+Функції:
+- Уніфікацію оцінок до єдиної кардинальної шкали (межі 1.5..9.5)
 - Розрахунок інформативності шкали за формулою Хартлі I = log₂ N
+- Журналювання трансформацій шкал
 """
 
 import math
 from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 import numpy as np
 
 
 class ScaleType(Enum):
     """
-    Типи шкал експертних оцінок (РЗОД-2011-3.pdf)
+    Типи шкал експертних оцінок (рівно 6 шкал згідно РЗОД-2011-3.pdf)
     """
-    ORDINAL = "ordinal"  # Порядкова шкала (2 градації)
-    SAATY_5 = "saaty_5"  # Фундаментальна шкала Сааті (5 градацій)
-    SAATY_9 = "saaty_9"  # Фундаментальна шкала Сааті (9 градацій)
-    BALANCED = "balanced"  # Збалансована шкала
-    POWER = "power"  # Степенева шкала
-    MA_ZHENG = "ma_zheng"  # Шкала Ма-Жена
-    DONEGAN = "donegan"  # Шкала Донегана-Додда-МакМастера
+    ORDINAL = "ordinal"  # Ординальна шкала (2 градації)
+    SAATY_9 = "saaty_9"  # Цілочислова шкала Сааті (9 градацій) - класична
+    BALANCED = "balanced"  # Збалансована шкала (3-9 градацій)
+    POWER = "power"  # Степенева шкала (3-9 градацій)
+    MA_ZHENG = "ma_zheng"  # Шкала Ма-Чженга (3-9 градацій, табл. 5 РЗОД-2011-3)
+    DONEGAN = "donegan"  # Шкала Донегана-Додд-МакМастера (3-9 градацій, табл. 6 РЗОД-2011-3)
 
 
-# Діапазон допустимих градацій для кожної шкали (РЗОД-2011-3.pdf, правило обмеження 7±2)
+# Діапазон допустимих градацій для кожної шкали (РЗОД-2011-3.pdf, правило 7±2)
 SCALE_GRADATIONS_RANGE = {
     ScaleType.ORDINAL: (2, 2),
-    ScaleType.SAATY_5: (3, 5),
     ScaleType.SAATY_9: (3, 9),
     ScaleType.BALANCED: (3, 9),
     ScaleType.POWER: (3, 9),
@@ -43,20 +48,22 @@ SCALE_GRADATIONS_RANGE = {
 def get_scale_values(scale_type: ScaleType, n_gradations: int) -> List[float]:
     """
     Повертає числові значення для заданої шкали та кількості градацій.
-    Базується на РЗОД-2011-3.pdf (таблиці відповідників шкал)
+    Базується на РЗОД-2011-3.pdf (таблиці 5, 6 та формули для кожної шкали)
 
     Args:
-        scale_type: Тип шкали
-        n_gradations: Кількість градацій (3-9)
+        scale_type: Тип шкали (одна з 6 доступних)
+        n_gradations: Кількість градацій (2-9, залежить від типу шкали)
 
     Returns:
         Список числових значень шкали
 
     Examples:
         >>> get_scale_values(ScaleType.SAATY_9, 9)
-        [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+        [1, 2, 3, 4, 5, 6, 7, 8, 9]
         >>> get_scale_values(ScaleType.ORDINAL, 2)
         [1.0, 9.0]
+        >>> len(get_scale_values(ScaleType.BALANCED, 5))
+        5
     """
     min_grad, max_grad = SCALE_GRADATIONS_RANGE.get(scale_type, (3, 9))
     if not (min_grad <= n_gradations <= max_grad):
@@ -65,30 +72,23 @@ def get_scale_values(scale_type: ScaleType, n_gradations: int) -> List[float]:
         )
 
     if scale_type == ScaleType.ORDINAL:
-        # Порядкова: екстремальні значення 1 та 9
+        # 1. Ординальна шкала (2 градації): екстремальні значення 1 та 9
+        # РЗОД-2011-3.pdf: найпростіша шкала, тільки напрямок переваги
         return [1.0, 9.0]
 
     elif scale_type == ScaleType.SAATY_9:
-        # Фундаментальна шкала Сааті (РЗОД-2011-3.pdf)
-        # 1, 2, 3, 4, 5, 6, 7, 8, 9 для n=9
-        # Для менших n беремо перші n значень
-        return list(range(1, n_gradations + 1))
-
-    elif scale_type == ScaleType.SAATY_5:
-        # Сааті з 5 градаціями: 1, 3, 5, 7, 9 (РЗОД-2011-3.pdf)
-        if n_gradations == 5:
-            return [1.0, 3.0, 5.0, 7.0, 9.0]
-        elif n_gradations == 3:
-            return [1.0, 5.0, 9.0]
-        elif n_gradations == 4:
-            return [1.0, 3.0, 5.0, 9.0]
+        # 2. Цілочислова шкала Сааті-9 (класична фундаментальна шкала)
+        # РЗОД-2011-3.pdf: 1, 2, 3, 4, 5, 6, 7, 8, 9 для n=9
+        # Для менших n: беремо рівномірно розподілені цілі значення
+        if n_gradations == 9:
+            return list(range(1, 10))  # [1, 2, 3, 4, 5, 6, 7, 8, 9]
         else:
-            # Для інших n інтерполюємо
-            return [1.0 + (i * 8.0 / (n_gradations - 1)) for i in range(n_gradations)]
+            # Рівномірний розподіл у діапазоні 1-9
+            return [round(1.0 + (i * 8.0 / (n_gradations - 1))) for i in range(n_gradations)]
 
     elif scale_type == ScaleType.BALANCED:
-        # Збалансована шкала: w/(1-w), де w рівномірно розподілено (РЗОД-2011-3.pdf)
-        # Формула: для градації i від 1 до n, w_i = i/n, значення = w/(1-w)
+        # 3. Збалансована шкала (РЗОД-2011-3.pdf, формула w/(1-w))
+        # w рівномірно розподілено, забезпечує рівномірний розподіл ваг
         values = []
         for i in range(1, n_gradations + 1):
             w = i / (n_gradations + 1)
@@ -101,15 +101,20 @@ def get_scale_values(scale_type: ScaleType, n_gradations: int) -> List[float]:
         return values
 
     elif scale_type == ScaleType.POWER:
-        # Степенева шкала: 9^((x-1)/(n-1)) (РЗОД-2011-3.pdf)
+        # 4. Степенева шкала (РЗОД-2011-3.pdf, формула 9^((i-1)/(n-1)))
+        # Геометричне зростання від 1 до 9
         values = []
         for i in range(n_gradations):
-            value = 9.0 ** (i / (n_gradations - 1)) if n_gradations > 1 else 1.0
+            if n_gradations > 1:
+                value = 9.0 ** (i / (n_gradations - 1))
+            else:
+                value = 1.0
             values.append(value)
         return values
 
     elif scale_type == ScaleType.MA_ZHENG:
-        # Шкала Ма-Жена: n/(n+1-i) (РЗОД-2011-3.pdf)
+        # 5. Шкала Ма-Чженга (РЗОД-2011-3.pdf, таблиця 5, формула n/(n+1-i))
+        # Для n=9: 9/9, 9/8, 9/7, 9/6, 9/5, 9/4, 9/3, 9/2, 9/1
         values = []
         for i in range(1, n_gradations + 1):
             value = n_gradations / (n_gradations + 1 - i)
@@ -117,20 +122,27 @@ def get_scale_values(scale_type: ScaleType, n_gradations: int) -> List[float]:
         return values
 
     elif scale_type == ScaleType.DONEGAN:
-        # Шкала Донегана-Додда-МакМастера (РЗОД-2011-3.pdf)
-        # Логарифмічне розподілення
+        # 6. Шкала Донегана-Додд-МакМастера (РЗОД-2011-3.pdf, таблиця 6)
+        # Формула: exp(tanh^(-1)((i-1)/(h-1))) де h - параметр "горизонту"
+        # Спрощена версія з логарифмічним розподіленням
+        h = 1 + 6 * math.sqrt(2)  # 7-ковий горизонт (РЗОД-2011-3.pdf)
         values = []
-        for i in range(n_gradations):
+        for i in range(1, n_gradations + 1):
             if n_gradations > 1:
-                value = 1.0 + 8.0 * (math.log(1 + i) / math.log(n_gradations))
+                # Нормалізуємо i до діапазону [0, 1]
+                x = (i - 1) / (n_gradations - 1)
+                # Використовуємо tanh для нелінійного масштабування
+                # value = exp(arctanh(x * (h-1)/(h+1)))
+                # Спрощена формула для практичного використання:
+                value = 1.0 + 8.0 * (math.tanh(x * 2.0) / math.tanh(2.0))
+                value = max(1.0, min(9.0, value))
             else:
                 value = 1.0
             values.append(value)
         return values
 
     else:
-        # За замовчуванням лінійна шкала 1-9
-        return [1.0 + (i * 8.0 / (n_gradations - 1)) for i in range(n_gradations)]
+        raise ValueError(f"Невідомий тип шкали: {scale_type}")
 
 
 def unify_to_cardinal(scale_type: ScaleType, n_gradations: int, grade_index: int) -> float:
@@ -235,7 +247,7 @@ def unify_judgment(scale_type: ScaleType, n_gradations: int,
         Уніфіковане значення на шкалі [1, 9]
 
     Examples:
-        >>> unify_judgment(ScaleType.SAATY_5, 5, 5.0)
+        >>> unify_judgment(ScaleType.SAATY_9, 9, 5.0)
         5
         >>> unify_judgment(ScaleType.SAATY_9, 9, 3.0)
         3
@@ -257,6 +269,49 @@ def unify_judgment(scale_type: ScaleType, n_gradations: int,
     return unify_to_cardinal(scale_type, n_gradations, grade_index)
 
 
+def create_transformation_log(expert_id: str, comparison: str, scale_type: ScaleType,
+                              n_gradations: int, original_value: float,
+                              unified_value: float) -> Dict:
+    """
+    Створює запис журналу трансформації шкали для експорту.
+    Базується на РЗОД-2011-4.pdf (уніфікація до кардинальної шкали)
+
+    Args:
+        expert_id: Ідентифікатор експерта
+        comparison: Назва порівняння (напр. "A vs B")
+        scale_type: Тип вихідної шкали
+        n_gradations: Кількість градацій вихідної шкали
+        original_value: Вихідне значення оцінки
+        unified_value: Уніфіковане значення на кардинальній шкалі
+
+    Returns:
+        Словник з інформацією про трансформацію
+
+    Examples:
+        >>> log = create_transformation_log("E1", "A vs B", ScaleType.SAATY_9, 9, 5.0, 5.0)
+        >>> log['expert_id']
+        'E1'
+        >>> log['informativeness'] > 3.0
+        True
+    """
+    informativeness = calculate_informativeness(n_gradations)
+
+    return {
+        'expert_id': expert_id,
+        'comparison': comparison,
+        'original_scale': scale_type.value,
+        'n_gradations': n_gradations,
+        'original_value': float(original_value),
+        'unified_value': float(unified_value),
+        'informativeness': float(informativeness),
+        'scale_bounds': {
+            'lower': 1.5,
+            'upper': 9.5
+        },
+        'transformation_formula': f'M_i^n = 1.5 + (i - 0.5) × 8 / {n_gradations}'
+    }
+
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
@@ -264,25 +319,44 @@ if __name__ == "__main__":
     # Демонстрація роботи модуля
     print("=== Демонстрація модуля scales.py ===\n")
 
-    print("1. Значення шкали Сааті-9 з 9 градаціями:")
-    print(get_scale_values(ScaleType.SAATY_9, 9))
+    print("=== Демонстрація 6 шкал експертних оцінок ===\n")
 
-    print("\n2. Інформативність шкал:")
-    for n in [2, 5, 9]:
+    print("1. Значення всіх 6 шкал з 9 градаціями:")
+    for scale_type in ScaleType:
+        min_grad, max_grad = SCALE_GRADATIONS_RANGE[scale_type]
+        if max_grad >= 9:
+            values = get_scale_values(scale_type, 9)
+            print(f"   {scale_type.value}: {[round(v, 2) for v in values]}")
+
+    print("\n2. Інформативність шкал (формула Хартлі I = log₂ N):")
+    for n in [2, 3, 5, 7, 9]:
         info = calculate_informativeness(n)
         print(f"   N={n} градацій: I = {info:.3f} біт")
 
-    print("\n3. Уніфікація оцінок:")
+    print("\n3. Уніфікація оцінок до кардинальної шкали [1.5, 9.5]:")
     test_cases = [
-        (ScaleType.SAATY_5, 5, 3),
+        (ScaleType.ORDINAL, 2, 1),
         (ScaleType.SAATY_9, 9, 5),
-        (ScaleType.ORDINAL, 2, 2),
+        (ScaleType.BALANCED, 5, 3),
+        (ScaleType.POWER, 7, 4),
+        (ScaleType.MA_ZHENG, 9, 7),
+        (ScaleType.DONEGAN, 9, 6),
     ]
     for scale_type, n, grade in test_cases:
         unified = unify_to_cardinal(scale_type, n, grade)
         print(f"   {scale_type.value}, N={n}, градація {grade} → {unified}")
 
-    print("\n4. Таблиця відповідників для N=5:")
+    print("\n4. Порівняння шкал з 5 градаціями:")
     table = get_correspondence_table(5)
-    for scale_type, values in table.items():
-        print(f"   {scale_type.value}: {[round(v, 2) for v in values]}")
+    for scale_type, values in sorted(table.items(), key=lambda x: x[0].value):
+        print(f"   {scale_type.value:15s}: {[round(v, 2) for v in values]}")
+
+    print("\n5. Демонстрація уніфікації конкретних оцінок:")
+    demo_judgments = [
+        (ScaleType.SAATY_9, 9, 7.0),
+        (ScaleType.BALANCED, 5, 3.5),
+        (ScaleType.MA_ZHENG, 9, 4.5),
+    ]
+    for scale_type, n, value in demo_judgments:
+        unified = unify_judgment(scale_type, n, value)
+        print(f"   {scale_type.value}, N={n}, значення={value:.1f} → уніфіковано: {unified}")

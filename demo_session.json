@@ -1,5 +1,5 @@
 {
-  "description": "Демонстраційна сесія GUI - 4 альтернативи, 2 експерти",
+  "description": "Демонстраційна сесія GUI - 4 альтернативи, 2 експерти, всі 6 шкал",
   "alternatives": [
     "Проект_A",
     "Проект_B",
@@ -14,7 +14,7 @@
         {
           "alt_i": "Проект_A",
           "alt_j": "Проект_B",
-          "value": 3.0,
+          "value": 5.0,
           "scale_type": "saaty_9",
           "n_gradations": 9,
           "scale_history": []
@@ -22,7 +22,7 @@
         {
           "alt_i": "Проект_A",
           "alt_j": "Проект_C",
-          "value": 5.0,
+          "value": 3.0,
           "scale_type": "saaty_9",
           "n_gradations": 9,
           "scale_history": []
@@ -38,25 +38,25 @@
         {
           "alt_i": "Проект_B",
           "alt_j": "Проект_C",
-          "value": 3.0,
-          "scale_type": "saaty_9",
-          "n_gradations": 9,
+          "value": 9.0,
+          "scale_type": "ordinal",
+          "n_gradations": 2,
           "scale_history": []
         },
         {
           "alt_i": "Проект_B",
           "alt_j": "Проект_D",
-          "value": 5.0,
-          "scale_type": "saaty_9",
-          "n_gradations": 9,
+          "value": 3.0,
+          "scale_type": "balanced",
+          "n_gradations": 5,
           "scale_history": []
         },
         {
           "alt_i": "Проект_C",
           "alt_j": "Проект_D",
-          "value": 3.0,
-          "scale_type": "saaty_9",
-          "n_gradations": 9,
+          "value": 2.0,
+          "scale_type": "power",
+          "n_gradations": 7,
           "scale_history": []
         }
       ]
@@ -68,49 +68,49 @@
         {
           "alt_i": "Проект_A",
           "alt_j": "Проект_B",
-          "value": 5.0,
-          "scale_type": "saaty_5",
+          "value": 3.0,
+          "scale_type": "ma_zheng",
           "n_gradations": 5,
           "scale_history": []
         },
         {
           "alt_i": "Проект_A",
           "alt_j": "Проект_C",
-          "value": 7.0,
-          "scale_type": "saaty_5",
-          "n_gradations": 5,
+          "value": 2.0,
+          "scale_type": "donegan",
+          "n_gradations": 3,
           "scale_history": []
         },
         {
           "alt_i": "Проект_A",
           "alt_j": "Проект_D",
-          "value": 9.0,
-          "scale_type": "saaty_5",
+          "value": 5.0,
+          "scale_type": "saaty_9",
           "n_gradations": 5,
           "scale_history": []
         },
         {
           "alt_i": "Проект_B",
           "alt_j": "Проект_C",
-          "value": 5.0,
-          "scale_type": "saaty_5",
-          "n_gradations": 5,
+          "value": 1.0,
+          "scale_type": "ordinal",
+          "n_gradations": 2,
           "scale_history": []
         },
         {
           "alt_i": "Проект_B",
           "alt_j": "Проект_D",
-          "value": 7.0,
-          "scale_type": "saaty_5",
-          "n_gradations": 5,
+          "value": 6.0,
+          "scale_type": "balanced",
+          "n_gradations": 9,
           "scale_history": []
         },
         {
           "alt_i": "Проект_C",
           "alt_j": "Проект_D",
-          "value": 3.0,
-          "scale_type": "saaty_5",
-          "n_gradations": 5,
+          "value": 2.0,
+          "scale_type": "saaty_9",
+          "n_gradations": 3,
           "scale_history": []
         }
       ]

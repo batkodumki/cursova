@@ -327,11 +327,11 @@ class ComparisonWindow(tk.Frame):
             width=30
         )
 
-        # Заповнюємо доступні шкали
+        # Заповнюємо доступні шкали (всі 6 шкал згідно РЗОД-2011-3.pdf)
         scales = ScaleManager.get_available_scales()
         scale_options = [f"{desc}" for scale_type, desc in scales]
         self.scale_combo['values'] = scale_options
-        self.scale_combo.current(2)  # Сааті-9 за замовчуванням
+        self.scale_combo.current(1)  # Цілочислова/Сааті-9 за замовчуванням
         self.scale_combo.bind('<<ComboboxSelected>>', self._on_scale_change)
         self.scale_combo.pack(side=tk.LEFT, padx=5)
 
