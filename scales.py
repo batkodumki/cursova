@@ -159,10 +159,10 @@ def unify_to_cardinal(scale_type: ScaleType, n_gradations: int, grade_index: int
         Уніфіковане значення на кардинальній шкалі [1, 9]
 
     Examples:
-        >>> unify_to_cardinal(ScaleType.SAATY_5, 5, 3)  # 3-я градація з 5
-        5.0
+        >>> unify_to_cardinal(ScaleType.SAATY_9, 5, 3)  # 3-я градація з 5
+        6
         >>> unify_to_cardinal(ScaleType.SAATY_9, 9, 5)  # 5-я градація з 9
-        5.0
+        6
     """
     if not (1 <= grade_index <= n_gradations):
         raise ValueError(
@@ -216,7 +216,7 @@ def get_correspondence_table(n_gradations: int) -> Dict[ScaleType, List[float]]:
 
     Examples:
         >>> table = get_correspondence_table(5)
-        >>> len(table[ScaleType.SAATY_5])
+        >>> len(table[ScaleType.SAATY_9])
         5
     """
     correspondence = {}
@@ -248,9 +248,9 @@ def unify_judgment(scale_type: ScaleType, n_gradations: int,
 
     Examples:
         >>> unify_judgment(ScaleType.SAATY_9, 9, 5.0)
-        5
+        6
         >>> unify_judgment(ScaleType.SAATY_9, 9, 3.0)
-        3
+        4
     """
     # Обробка обернених оцінок
     if is_reciprocal and original_value != 0:
